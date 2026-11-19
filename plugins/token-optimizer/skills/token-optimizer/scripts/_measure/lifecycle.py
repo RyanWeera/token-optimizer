@@ -4651,8 +4651,8 @@ def _settings_resolve_restore_value(key: str, highwater: dict) -> tuple:
     return None, None
 
 
-def _maybe_self_heal_settings():
-    """Silent self-heal for settings.json wipe damage. Called at the START of
+def _maybe_self_heal_settings() -> str | None:
+    """Self-heal for settings.json wipe damage. Called at the START of
     run_ensure_health, BEFORE any settings writes, so we see the file as the
     user left it.
 
@@ -4677,7 +4677,8 @@ def _maybe_self_heal_settings():
     The snapshot and the pre-restore backup never hold secrets
     (settings_backup.scrub); a scrubbed value stays absent on restore. stdout
     stays silent; a restore prints one stderr line, names the keys it could not
-    restore, and is recorded in the heal log. TOKEN_OPTIMIZER_SETTINGS_HEAL=0
+    restore, is recorded in the heal log, and returns that line so ensure-health
+    shows it to the user as a systemMessage. Returns None when nothing was restored. TOKEN_OPTIMIZER_SETTINGS_HEAL=0
     skips snapshot and restore. FAIL OPEN: any error returns without touching
     the file.
     """
@@ -4846,7 +4847,7 @@ def run_ensure_health():
     # Settings self-heal: runs BEFORE any other settings writes so we see the
     # file as the user left it. Claude Code ONLY -- the wipe bug only affects
     # ~/.claude/settings.json, and Codex/Hermes use different config formats.
-    # Silent, additive, high-water-mark-based recovery for users already
+    # Additive, high-water-mark-based recovery (a restore is shown to the user) for users already
     # whose settings.json has lost top-level keys. See
     # _maybe_self_heal_settings().
     if _is_claude:
@@ -4854,7 +4855,7 @@ def run_ensure_health():
             _heal_notice = _measure_facade._maybe_self_heal_settings()
             if _heal_notice:
                 print(_measure_facade.json.dumps({"systemMessage":
-                    f"  [Token Optimizer] {_heal_notice}. "
+                    f"  {_heal_notice}. "
                     "Turn this off with TOKEN_OPTIMIZER_SETTINGS_HEAL=0."}))
         except Exception:
             pass  # fail open: a heal error must never break SessionStart
