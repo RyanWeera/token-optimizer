@@ -268,6 +268,17 @@ def test_heal_is_silent_to_stdout(measure, capsys):
     assert captured.out == "", f"heal must produce no stdout, got: {captured.out!r}"
 
 
+def test_heal_returns_notice_for_user_visible_message(measure):
+    """A restore returns its notice so ensure-health can show it as a systemMessage."""
+    mod, settings, heal_dir = measure
+    assert mod._maybe_self_heal_settings() is None  # snapshot only
+    _write(settings, WIPE_RESIDUE)
+
+    notice = mod._maybe_self_heal_settings()
+
+    assert notice and "restored" in notice and "permissions" in notice
+
+
 # --------------------------------------------------------------------------- #
 # 3. User-authored key survives: NO heal (the survivor fingerprint gate)
 # --------------------------------------------------------------------------- #

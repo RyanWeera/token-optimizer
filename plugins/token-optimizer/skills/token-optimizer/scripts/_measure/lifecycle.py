@@ -4651,7 +4651,7 @@ def _settings_resolve_restore_value(key: str, highwater: dict) -> tuple:
     return None, None
 
 
-def _maybe_self_heal_settings() -> None:
+def _maybe_self_heal_settings():
     """Silent self-heal for settings.json wipe damage. Called at the START of
     run_ensure_health, BEFORE any settings writes, so we see the file as the
     user left it.
@@ -4800,6 +4800,7 @@ def _maybe_self_heal_settings() -> None:
                 notice=_notice,
             )
             settings_backup.announce_restore(_notice)
+            return _notice
     except Exception:
         # Fail open, always. A heal that breaks a session is a worse bug
         # than the one it heals.
@@ -4850,7 +4851,11 @@ def run_ensure_health():
     # _maybe_self_heal_settings().
     if _is_claude:
         try:
-            _measure_facade._maybe_self_heal_settings()
+            _heal_notice = _measure_facade._maybe_self_heal_settings()
+            if _heal_notice:
+                print(_measure_facade.json.dumps({"systemMessage":
+                    f"  [Token Optimizer] {_heal_notice}. "
+                    "Turn this off with TOKEN_OPTIMIZER_SETTINGS_HEAL=0."}))
         except Exception:
             pass  # fail open: a heal error must never break SessionStart
 
